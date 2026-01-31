@@ -189,7 +189,10 @@
           <h2>Validation history</h2>
           <ul>
             {% for item in history %}
-            <li>#{{ item.id }} · {{ item.created_at }} · ok={{ item.payload.ok }}</li>
+            <li>
+              <a href="/history/{{ item.id }}">#{{ item.id }}</a>
+              · {{ item.created_at }} · ok={{ item.payload.ok }}
+            </li>
             {% else %}
             <li>No history yet.</li>
             {% endfor %}
@@ -199,7 +202,10 @@
           <h2>Diff history</h2>
           <ul>
             {% for item in diff_history %}
-            <li>#{{ item.id }} · {{ item.created_at }} · ok={{ item.payload.ok }}</li>
+            <li>
+              <a href="/diff-history/{{ item.id }}">#{{ item.id }}</a>
+              · {{ item.created_at }} · ok={{ item.payload.ok }}
+            </li>
             {% else %}
             <li>No history yet.</li>
             {% endfor %}

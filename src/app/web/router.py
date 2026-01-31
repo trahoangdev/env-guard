@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
 from app.db import report_store
@@ -49,6 +49,56 @@ def home(request: Request) -> HTMLResponse:
             "diff_history": report_store.list_diff_reports(limit=5),
         },
     )
+
+
+@router.get("/history/{report_id}", response_class=HTMLResponse)
+def validation_detail(request: Request, report_id: int) -> HTMLResponse:
+    report = report_store.get_validation_report(report_id)
+    if report is None:
+        raise HTTPException(status_code=404, detail="Validation report not found")
+    return _TEMPLATES.TemplateResponse(
+        request,
+        "detail.html",
+        {
+            "title": f"Validation Report #{report_id}",
+            "report": report,
+            "back_href": "/",
+            "download_href": f"/history/{report_id}/download",
+        },
+    )
+
+
+@router.get("/history/{report_id}/download")
+def validation_download(report_id: int) -> JSONResponse:
+    report = report_store.get_validation_report(report_id)
+    if report is None:
+        raise HTTPException(status_code=404, detail="Validation report not found")
+    return JSONResponse(report)
+
+
+@router.get("/diff-history/{report_id}", response_class=HTMLResponse)
+def diff_detail(request: Request, report_id: int) -> HTMLResponse:
+    report = report_store.get_diff_report(report_id)
+    if report is None:
+        raise HTTPException(status_code=404, detail="Diff report not found")
+    return _TEMPLATES.TemplateResponse(
+        request,
+        "detail.html",
+        {
+            "title": f"Diff Report #{report_id}",
+            "report": report,
+            "back_href": "/",
+            "download_href": f"/diff-history/{report_id}/download",
+        },
+    )
+
+
+@router.get("/diff-history/{report_id}/download")
+def diff_download(report_id: int) -> JSONResponse:
+    report = report_store.get_diff_report(report_id)
+    if report is None:
+        raise HTTPException(status_code=404, detail="Diff report not found")
+    return JSONResponse(report)
 
 
 @router.post("/validate-ui", response_class=HTMLResponse)

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ title }}</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f7f4ef;
+        --card: #ffffff;
+        --ink: #1b1b1b;
+        --muted: #6a6a6a;
+        --accent: #3b6eea;
+        --border: #e2ded7;
+      }
+      body {
+        margin: 0;
+        font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+        background: linear-gradient(135deg, #f7f4ef 0%, #f0f7ff 100%);
+        color: var(--ink);
+      }
+      .wrap {
+        max-width: 900px;
+        margin: 32px auto 80px;
+        padding: 0 20px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 18px;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.06);
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 24px;
+      }
+      .meta {
+        color: var(--muted);
+        font-size: 13px;
+        margin-bottom: 14px;
+      }
+      pre {
+        background: #f8f8f8;
+        border: 1px dashed var(--border);
+        border-radius: 10px;
+        padding: 12px;
+        overflow: auto;
+      }
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      .actions {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="card">
+        <h1>{{ title }}</h1>
+        <div class="meta">Created at: {{ report.created_at }}</div>
+        <div class="actions">
+          <a href="{{ back_href }}">Back</a>
+          <a href="{{ download_href }}">Download JSON</a>
+        </div>
+        <pre>{{ report | tojson(indent=2) }}</pre>
+      </div>
+    </div>
+  </body>
+</html>

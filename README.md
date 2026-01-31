@@ -21,6 +21,7 @@ uvicorn app.main:app --reload --app-dir src
 ## Web UI
 
 Open `http://127.0.0.1:8000/` to upload env files, view validation/diff results, and generate docs.
+History entries link to detail pages with JSON download.
 
 ## API
 
