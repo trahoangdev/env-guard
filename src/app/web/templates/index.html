@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -7,51 +7,88 @@
     <style>
       :root {
         color-scheme: light;
-        --bg: #f7f4ef;
+        --bg: #f6f2ea;
+        --bg-2: #eef5ff;
+        --ink: #161616;
+        --muted: #6e6a63;
         --card: #ffffff;
-        --ink: #1b1b1b;
-        --muted: #6a6a6a;
-        --accent: #3b6eea;
-        --border: #e2ded7;
+        --border: #e7e1d7;
+        --accent: #2869ff;
+        --accent-2: #f7b84f;
         --ok: #1f8a4c;
-        --warn: #b85f00;
+        --warn: #c04b00;
+        --bad: #b3261e;
+        --shadow: 0 18px 40px rgba(19, 21, 27, 0.08);
+      }
+      * {
+        box-sizing: border-box;
       }
       body {
         margin: 0;
-        font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
-        background: linear-gradient(135deg, #f7f4ef 0%, #f0f7ff 100%);
+        font-family: "Space Grotesk", "IBM Plex Sans", "Segoe UI", sans-serif;
         color: var(--ink);
+        background: radial-gradient(circle at 10% 10%, #ffffff 0%, var(--bg) 45%)
+            no-repeat,
+          radial-gradient(circle at 80% 0%, #f0f7ff 0%, transparent 55%)
+            no-repeat,
+          linear-gradient(135deg, var(--bg) 0%, var(--bg-2) 100%);
+        min-height: 100vh;
       }
       .wrap {
-        max-width: 1100px;
-        margin: 32px auto 80px;
+        max-width: 1150px;
+        margin: 36px auto 80px;
         padding: 0 20px;
+        animation: fadeIn 0.6s ease-out;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
       header {
         display: flex;
         justify-content: space-between;
         align-items: center;
+        gap: 16px;
         margin-bottom: 24px;
       }
       h1 {
-        margin: 0;
-        font-size: 30px;
-        letter-spacing: -0.5px;
+        margin: 0 0 6px;
+        font-size: 32px;
+        letter-spacing: -0.6px;
       }
       .sub {
         color: var(--muted);
+        font-size: 14px;
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 14px;
+        border-radius: 999px;
+        background: #fff5e6;
+        border: 1px solid #f2d5a6;
+        color: #8a4b00;
+        font-size: 12px;
+        font-weight: 600;
       }
       .grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-        gap: 16px;
+        gap: 18px;
       }
       .card {
         background: var(--card);
         border: 1px solid var(--border);
-        border-radius: 14px;
+        border-radius: 16px;
         padding: 18px;
-        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.06);
+        box-shadow: var(--shadow);
       }
       .card h2 {
         margin: 0 0 12px;
@@ -59,9 +96,9 @@
       }
       label {
         display: block;
-        font-size: 13px;
+        font-size: 12px;
         color: var(--muted);
-        margin-bottom: 4px;
+        margin-bottom: 6px;
       }
       input[type="file"] {
         width: 100%;
@@ -69,7 +106,7 @@
       }
       button {
         background: var(--accent);
-        color: white;
+        color: #fff;
         border: none;
         padding: 10px 16px;
         border-radius: 10px;
@@ -78,20 +115,57 @@
       }
       .result {
         margin-top: 12px;
-        font-size: 13px;
-        background: #f8f8f8;
-        border-radius: 10px;
-        padding: 10px;
+        background: #fbfaf8;
         border: 1px dashed var(--border);
-        white-space: pre-wrap;
+        border-radius: 12px;
+        padding: 12px;
+        font-size: 13px;
+      }
+      .summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 10px;
+        font-size: 12px;
+      }
+      .badge {
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: #f0f3ff;
+        color: #2b47aa;
+        font-weight: 600;
       }
       .ok {
         color: var(--ok);
         font-weight: 600;
       }
       .bad {
-        color: var(--warn);
+        color: var(--bad);
         font-weight: 600;
+      }
+      .issues {
+        display: grid;
+        gap: 8px;
+      }
+      .issue-group {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px;
+      }
+      .issue-group h3 {
+        margin: 0 0 6px;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        color: var(--muted);
+      }
+      .issue-group ul {
+        margin: 0;
+        padding-left: 16px;
+      }
+      .issue-group li {
+        margin-bottom: 4px;
       }
       .history {
         margin-top: 16px;
@@ -100,20 +174,37 @@
       .history ul {
         padding-left: 16px;
       }
-      .pill {
-        display: inline-block;
-        padding: 2px 8px;
-        border-radius: 999px;
-        background: #eef3ff;
+      .history a {
         color: var(--accent);
+        text-decoration: none;
+        font-weight: 600;
+      }
+      .doc-table {
+        width: 100%;
+        border-collapse: collapse;
         font-size: 12px;
-        margin-left: 8px;
+      }
+      .doc-table th,
+      .doc-table td {
+        border: 1px solid var(--border);
+        padding: 6px 8px;
+        text-align: left;
+      }
+      .doc-table th {
+        background: #f6f7fb;
+      }
+      .raw {
+        margin-top: 10px;
+        white-space: pre-wrap;
+        background: #f3f4f6;
+        border-radius: 10px;
+        padding: 10px;
+        font-size: 12px;
       }
       @media (max-width: 600px) {
         header {
           flex-direction: column;
           align-items: flex-start;
-          gap: 8px;
         }
       }
     </style>
@@ -125,7 +216,7 @@
           <h1>Env Guard</h1>
           <div class="sub">Validate env files, detect drift, and generate docs.</div>
         </div>
-        <div class="pill">Web UI</div>
+        <div class="pill">Web Console</div>
       </header>
 
       <div class="grid">
@@ -140,12 +231,61 @@
           </form>
           {% if validation %}
           <div class="result">
-            {% if validation.ok %}
-            <div class="ok">OK — no issues found.</div>
-            {% else %}
-            <div class="bad">Issues detected.</div>
-            {% endif %}
-            {{ validation | tojson(indent=2) }}
+            <div class="summary">
+              <span class="badge">ok={{ validation.ok }}</span>
+              <span class="badge">missing={{ validation.required_missing | length }}</span>
+              <span class="badge">empty={{ validation.empty_values | length }}</span>
+              <span class="badge">invalid={{ validation.invalid_values | length }}</span>
+              <span class="badge">extra={{ validation.extra_keys | length }}</span>
+              {% if validation.ok %}
+              <span class="ok">No issues found</span>
+              {% else %}
+              <span class="bad">Issues detected</span>
+              {% endif %}
+            </div>
+            <div class="issues">
+              <div class="issue-group">
+                <h3>Missing</h3>
+                <ul>
+                  {% for item in validation.required_missing %}
+                  <li>{{ item.key }}</li>
+                  {% else %}
+                  <li>None</li>
+                  {% endfor %}
+                </ul>
+              </div>
+              <div class="issue-group">
+                <h3>Empty</h3>
+                <ul>
+                  {% for item in validation.empty_values %}
+                  <li>{{ item.key }}</li>
+                  {% else %}
+                  <li>None</li>
+                  {% endfor %}
+                </ul>
+              </div>
+              <div class="issue-group">
+                <h3>Invalid</h3>
+                <ul>
+                  {% for item in validation.invalid_values %}
+                  <li>{{ item.key }} — {{ item.reason }}</li>
+                  {% else %}
+                  <li>None</li>
+                  {% endfor %}
+                </ul>
+              </div>
+              <div class="issue-group">
+                <h3>Extra</h3>
+                <ul>
+                  {% for item in validation.extra_keys %}
+                  <li>{{ item.key }}</li>
+                  {% else %}
+                  <li>None</li>
+                  {% endfor %}
+                </ul>
+              </div>
+            </div>
+            <div class="raw">{{ validation | tojson(indent=2) }}</div>
           </div>
           {% endif %}
         </div>
@@ -161,12 +301,50 @@
           </form>
           {% if diff %}
           <div class="result">
-            {% if diff.ok %}
-            <div class="ok">No differences.</div>
-            {% else %}
-            <div class="bad">Differences found.</div>
-            {% endif %}
-            {{ diff | tojson(indent=2) }}
+            <div class="summary">
+              <span class="badge">ok={{ diff.ok }}</span>
+              <span class="badge">missing={{ diff.missing_in_compare | length }}</span>
+              <span class="badge">extra={{ diff.extra_in_compare | length }}</span>
+              <span class="badge">changed={{ diff.different_values | length }}</span>
+              {% if diff.ok %}
+              <span class="ok">No differences</span>
+              {% else %}
+              <span class="bad">Differences found</span>
+              {% endif %}
+            </div>
+            <div class="issues">
+              <div class="issue-group">
+                <h3>Missing in compare</h3>
+                <ul>
+                  {% for item in diff.missing_in_compare %}
+                  <li>{{ item.key }} (base={{ item.base_value }})</li>
+                  {% else %}
+                  <li>None</li>
+                  {% endfor %}
+                </ul>
+              </div>
+              <div class="issue-group">
+                <h3>Extra in compare</h3>
+                <ul>
+                  {% for item in diff.extra_in_compare %}
+                  <li>{{ item.key }} (compare={{ item.compare_value }})</li>
+                  {% else %}
+                  <li>None</li>
+                  {% endfor %}
+                </ul>
+              </div>
+              <div class="issue-group">
+                <h3>Different values</h3>
+                <ul>
+                  {% for item in diff.different_values %}
+                  <li>{{ item.key }} ({{ item.base_value }} → {{ item.compare_value }})</li>
+                  {% else %}
+                  <li>None</li>
+                  {% endfor %}
+                </ul>
+              </div>
+            </div>
+            <div class="raw">{{ diff | tojson(indent=2) }}</div>
           </div>
           {% endif %}
         </div>
@@ -179,7 +357,42 @@
             <button type="submit">Generate</button>
           </form>
           {% if docs %}
-          <div class="result">{{ docs.markdown }}</div>
+          <div class="result">
+            <table class="doc-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Required</th>
+                  <th>Default</th>
+                  <th>Description</th>
+                  <th>Constraints</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in docs.variables %}
+                <tr>
+                  <td>{{ item.key }}</td>
+                  <td>{{ item.required }}</td>
+                  <td>{{ item.default }}</td>
+                  <td>{{ item.description }}</td>
+                  <td>
+                    {% if item.value_type %}type={{ item.value_type }}{% endif %}
+                    {% if item.allowed %}; allowed={{ item.allowed | join(',') }}{% endif %}
+                    {% if item.allowed_ci %}; allowed_ci=true{% endif %}
+                    {% if item.pattern %}; pattern={{ item.pattern }}{% endif %}
+                    {% if item.min_value is not none %}; min={{ item.min_value }}{% endif %}
+                    {% if item.max_value is not none %}; max={{ item.max_value }}{% endif %}
+                    {% if item.min_len is not none %}; min_len={{ item.min_len }}{% endif %}
+                    {% if item.max_len is not none %}; max_len={{ item.max_len }}{% endif %}
+                    {% if item.aliases %}; aliases={{ item.aliases | join(',') }}{% endif %}
+                    {% if item.message %}; message={{ item.message }}{% endif %}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            <div class="raw">{{ docs.markdown }}</div>
+          </div>
           {% endif %}
         </div>
       </div>

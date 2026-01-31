@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import argparse
 import json
@@ -25,7 +25,8 @@ def _cmd_validate(args: argparse.Namespace) -> int:
         "invalid_values": [item.__dict__ for item in report.invalid_values],
         "extra_keys": [item.__dict__ for item in report.extra_keys],
     }
-    print(_format_output(payload, pretty=args.pretty))
+    output = _format_output(payload, report, args.format, args.pretty)
+    print(output)
     return _exit_code(report.ok, fail_on_warning=args.fail_on_warning)
 
 
@@ -49,14 +50,46 @@ def _cmd_diff(args: argparse.Namespace) -> int:
         "extra_in_compare": [item.__dict__ for item in report.extra_in_compare],
         "different_values": [item.__dict__ for item in report.different_values],
     }
-    print(_format_output(payload, pretty=args.pretty))
+    output = _format_output(payload, report, args.format, args.pretty)
+    print(output)
     return _exit_code(report.ok, fail_on_warning=args.fail_on_warning)
 
 
-def _format_output(payload: dict, pretty: bool) -> str:
-    if pretty:
+def _format_output(payload: dict, report: object, fmt: str, pretty: bool) -> str:
+    if fmt == "summary":
+        return _format_summary(payload)
+    if fmt == "pretty" or pretty:
         return json.dumps(payload, indent=2)
     return json.dumps(payload, separators=(",", ":"))
+
+
+def _format_summary(payload: dict) -> str:
+    lines = [f"ok: {payload.get('ok')}"]
+    if "required_missing" in payload:
+        lines.append(_summarize_list("missing", payload["required_missing"], key_field="key"))
+        lines.append(_summarize_list("empty", payload["empty_values"], key_field="key"))
+        lines.append(_summarize_list("invalid", payload["invalid_values"], key_field="key", reason_field="reason"))
+        lines.append(_summarize_list("extra", payload["extra_keys"], key_field="key"))
+    else:
+        lines.append(_summarize_list("missing_in_compare", payload["missing_in_compare"], key_field="key"))
+        lines.append(_summarize_list("extra_in_compare", payload["extra_in_compare"], key_field="key"))
+        lines.append(_summarize_list("different_values", payload["different_values"], key_field="key", reason_field=None))
+    return "\n".join(lines)
+
+
+def _summarize_list(
+    name: str,
+    items: list[dict],
+    key_field: str,
+    reason_field: str | None = None,
+) -> str:
+    if not items:
+        return f"{name}: 0"
+    if reason_field:
+        summary = ", ".join(f"{item[key_field]}({item[reason_field]})" for item in items)
+    else:
+        summary = ", ".join(item[key_field] for item in items)
+    return f"{name}: {len(items)} -> {summary}"
 
 
 def _exit_code(ok: bool, fail_on_warning: bool) -> int:
@@ -75,9 +108,15 @@ def _build_parser() -> argparse.ArgumentParser:
     validate_parser.add_argument("--example", required=True, help="Path to .env.example")
     validate_parser.add_argument("--env", required=True, help="Path to .env")
     validate_parser.add_argument(
+        "--format",
+        choices=["json", "pretty", "summary"],
+        default="json",
+        help="Output format (default: json)",
+    )
+    validate_parser.add_argument(
         "--pretty",
         action="store_true",
-        help="Pretty-print JSON output (default is compact)",
+        help="Pretty-print JSON output (legacy flag)",
     )
     validate_parser.add_argument(
         "--fail-on-warning",
@@ -97,9 +136,15 @@ def _build_parser() -> argparse.ArgumentParser:
     diff_parser.add_argument("--base", required=True, help="Base .env file")
     diff_parser.add_argument("--compare", required=True, help="Compare .env file")
     diff_parser.add_argument(
+        "--format",
+        choices=["json", "pretty", "summary"],
+        default="json",
+        help="Output format (default: json)",
+    )
+    diff_parser.add_argument(
         "--pretty",
         action="store_true",
-        help="Pretty-print JSON output (default is compact)",
+        help="Pretty-print JSON output (legacy flag)",
     )
     diff_parser.add_argument(
         "--fail-on-warning",
