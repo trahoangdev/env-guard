@@ -2,6 +2,8 @@
 
 FastAPI service to validate environment variables against templates, detect drift, and generate config docs.
 
+Project architecture: see `docs/architecture.md`.
+
 ## Features
 - Validate `.env` against `.env.example` (missing, empty, extra)
 - Validate value rules (type, allowed values, regex)
