@@ -1,0 +1,391 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Env Guard</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f6f2ea;
+        --bg-2: #eef5ff;
+        --ink: #161616;
+        --muted: #6e6a63;
+        --card: #ffffff;
+        --border: #e7e1d7;
+        --accent: #2869ff;
+        --accent-2: #f7b84f;
+        --ok: #1f8a4c;
+        --bad: #b3261e;
+        --shadow: 0 18px 40px rgba(19, 21, 27, 0.08);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: "Space Grotesk", "IBM Plex Sans", "Segoe UI", sans-serif;
+        color: var(--ink);
+        background: radial-gradient(circle at 10% 10%, #ffffff 0%, var(--bg) 45%)
+            no-repeat,
+          radial-gradient(circle at 80% 0%, #f0f7ff 0%, transparent 55%)
+            no-repeat,
+          linear-gradient(135deg, var(--bg) 0%, var(--bg-2) 100%);
+        min-height: 100vh;
+      }
+      .wrap {
+        max-width: 1150px;
+        margin: 36px auto 80px;
+        padding: 0 20px;
+        animation: fadeIn 0.6s ease-out;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+      h1 {
+        margin: 0 0 6px;
+        font-size: 32px;
+        letter-spacing: -0.6px;
+      }
+      .sub {
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 14px;
+        border-radius: 999px;
+        background: #fff5e6;
+        border: 1px solid #f2d5a6;
+        color: #8a4b00;
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .nav {
+        display: inline-flex;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      .nav a {
+        text-decoration: none;
+        color: var(--accent);
+        font-weight: 600;
+        font-size: 13px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 18px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 18px;
+        box-shadow: var(--shadow);
+      }
+      .card h2 {
+        margin: 0 0 12px;
+        font-size: 18px;
+      }
+      label {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+      input[type="file"] {
+        width: 100%;
+        margin-bottom: 12px;
+      }
+      button {
+        background: var(--accent);
+        color: #fff;
+        border: none;
+        padding: 10px 16px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .result {
+        margin-top: 12px;
+        background: #fbfaf8;
+        border: 1px dashed var(--border);
+        border-radius: 12px;
+        padding: 12px;
+        font-size: 13px;
+        overflow: hidden;
+      }
+      .summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 10px;
+        font-size: 12px;
+      }
+      .badge {
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: #f0f3ff;
+        color: #2b47aa;
+        font-weight: 600;
+      }
+      .ok {
+        color: var(--ok);
+        font-weight: 600;
+      }
+      .bad {
+        color: var(--bad);
+        font-weight: 600;
+      }
+      .issues {
+        display: grid;
+        gap: 8px;
+      }
+      .issue-group {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px;
+        max-width: 100%;
+        overflow: auto;
+      }
+      .issue-group h3 {
+        margin: 0 0 6px;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        color: var(--muted);
+      }
+      .issue-group ul {
+        margin: 0;
+        padding-left: 16px;
+      }
+      .issue-group li {
+        margin-bottom: 4px;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+      }
+      .history {
+        margin-top: 16px;
+        font-size: 12px;
+      }
+      .history ul {
+        padding-left: 16px;
+      }
+      .history a {
+        color: var(--accent);
+        text-decoration: none;
+        font-weight: 600;
+      }
+      .raw {
+        margin-top: 10px;
+        white-space: pre-wrap;
+        background: #f3f4f6;
+        border-radius: 10px;
+        padding: 10px;
+        font-size: 12px;
+        max-height: 220px;
+        overflow: auto;
+        word-break: break-word;
+      }
+      @media (max-width: 600px) {
+        header {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <div>
+          <h1>Env Guard</h1>
+          <div class="sub">Validate env files, detect drift, and generate docs.</div>
+          <div class="nav">
+            <a href="/">Home</a>
+            <a href="/docs">Docs</a>
+          </div>
+        </div>
+        <div class="pill">Web Console</div>
+      </header>
+
+      <div class="grid">
+        <div class="card">
+          <h2>Validate .env</h2>
+          <form action="/validate-ui" method="post" enctype="multipart/form-data">
+            <label>Env file</label>
+            <input type="file" name="env_file" required />
+            <label>.env.example (optional)</label>
+            <input type="file" name="example_file" />
+            <button type="submit">Validate</button>
+          </form>
+          {% if validation %}
+          <div class="result">
+            <div class="summary">
+              <span class="badge">ok={{ validation.ok }}</span>
+              <span class="badge">missing={{ validation.required_missing | length }}</span>
+              <span class="badge">empty={{ validation.empty_values | length }}</span>
+              <span class="badge">invalid={{ validation.invalid_values | length }}</span>
+              <span class="badge">extra={{ validation.extra_keys | length }}</span>
+              {% if validation.ok %}
+              <span class="ok">No issues found</span>
+              {% else %}
+              <span class="bad">Issues detected</span>
+              {% endif %}
+            </div>
+            <div class="issues">
+              <div class="issue-group">
+                <h3>Missing</h3>
+                <ul>
+                  {% for item in validation.required_missing %}
+                  <li>{{ item.key }}</li>
+                  {% else %}
+                  <li>None</li>
+                  {% endfor %}
+                </ul>
+              </div>
+              <div class="issue-group">
+                <h3>Empty</h3>
+                <ul>
+                  {% for item in validation.empty_values %}
+                  <li>{{ item.key }}</li>
+                  {% else %}
+                  <li>None</li>
+                  {% endfor %}
+                </ul>
+              </div>
+              <div class="issue-group">
+                <h3>Invalid</h3>
+                <ul>
+                  {% for item in validation.invalid_values %}
+                  <li>{{ item.key }} — {{ item.reason }}</li>
+                  {% else %}
+                  <li>None</li>
+                  {% endfor %}
+                </ul>
+              </div>
+              <div class="issue-group">
+                <h3>Extra</h3>
+                <ul>
+                  {% for item in validation.extra_keys %}
+                  <li>{{ item.key }}</li>
+                  {% else %}
+                  <li>None</li>
+                  {% endfor %}
+                </ul>
+              </div>
+            </div>
+            <div class="raw">{{ validation | tojson(indent=2) }}</div>
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="card">
+          <h2>Diff envs</h2>
+          <form action="/diff-ui" method="post" enctype="multipart/form-data">
+            <label>Base env</label>
+            <input type="file" name="base_env_file" required />
+            <label>Compare env</label>
+            <input type="file" name="compare_env_file" required />
+            <button type="submit">Diff</button>
+          </form>
+          {% if diff %}
+          <div class="result">
+            <div class="summary">
+              <span class="badge">ok={{ diff.ok }}</span>
+              <span class="badge">missing={{ diff.missing_in_compare | length }}</span>
+              <span class="badge">extra={{ diff.extra_in_compare | length }}</span>
+              <span class="badge">changed={{ diff.different_values | length }}</span>
+              {% if diff.ok %}
+              <span class="ok">No differences</span>
+              {% else %}
+              <span class="bad">Differences found</span>
+              {% endif %}
+            </div>
+            <div class="issues">
+              <div class="issue-group">
+                <h3>Missing in compare</h3>
+                <ul>
+                  {% for item in diff.missing_in_compare %}
+                  <li>{{ item.key }} (base={{ item.base_value }})</li>
+                  {% else %}
+                  <li>None</li>
+                  {% endfor %}
+                </ul>
+              </div>
+              <div class="issue-group">
+                <h3>Extra in compare</h3>
+                <ul>
+                  {% for item in diff.extra_in_compare %}
+                  <li>{{ item.key }} (compare={{ item.compare_value }})</li>
+                  {% else %}
+                  <li>None</li>
+                  {% endfor %}
+                </ul>
+              </div>
+              <div class="issue-group">
+                <h3>Different values</h3>
+                <ul>
+                  {% for item in diff.different_values %}
+                  <li>{{ item.key }} ({{ item.base_value }} → {{ item.compare_value }})</li>
+                  {% else %}
+                  <li>None</li>
+                  {% endfor %}
+                </ul>
+              </div>
+            </div>
+            <div class="raw">{{ diff | tojson(indent=2) }}</div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="grid" style="margin-top: 18px;">
+        <div class="card history">
+          <h2>Validation history</h2>
+          <ul>
+            {% for item in history %}
+            <li>
+              <a href="/history/{{ item.id }}">#{{ item.id }}</a>
+              · {{ item.created_at }} · ok={{ item.payload.ok }}
+            </li>
+            {% else %}
+            <li>No history yet.</li>
+            {% endfor %}
+          </ul>
+        </div>
+        <div class="card history">
+          <h2>Diff history</h2>
+          <ul>
+            {% for item in diff_history %}
+            <li>
+              <a href="/diff-history/{{ item.id }}">#{{ item.id }}</a>
+              · {{ item.created_at }} · ok={{ item.payload.ok }}
+            </li>
+            {% else %}
+            <li>No history yet.</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

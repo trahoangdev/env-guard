@@ -1,6 +1,8 @@
 ﻿from __future__ import annotations
 
 from dataclasses import dataclass
+import io
+import re
 from typing import Dict, Iterable, List, Optional
 
 from dotenv import dotenv_values
@@ -12,6 +14,16 @@ class EnvSpec:
     default: str | None
     required: bool
     description: str | None
+    value_type: str | None
+    allowed: List[str] | None
+    allowed_ci: bool | None
+    pattern: str | None
+    min_value: float | None
+    max_value: float | None
+    min_len: int | None
+    max_len: int | None
+    aliases: List[str] | None
+    message: str | None
 
 
 @dataclass(frozen=True)
@@ -24,16 +36,120 @@ class ValidationIssue:
 class ValidationReport:
     required_missing: List[ValidationIssue]
     empty_values: List[ValidationIssue]
+    invalid_values: List[ValidationIssue]
     extra_keys: List[ValidationIssue]
     ok: bool
 
 
 _LAST_REPORT: Optional[ValidationReport] = None
+_LAST_DIFF: Optional["DiffReport"] = None
+
+
+def _parse_comment(
+    comment: str,
+) -> tuple[
+    str | None,
+    str | None,
+    List[str] | None,
+    bool | None,
+    str | None,
+    float | None,
+    float | None,
+    int | None,
+    int | None,
+    List[str] | None,
+    str | None,
+]:
+    description_parts: List[str] = []
+    value_type: str | None = None
+    allowed: List[str] | None = None
+    allowed_ci: bool | None = None
+    pattern: str | None = None
+    min_value: float | None = None
+    max_value: float | None = None
+    min_len: int | None = None
+    max_len: int | None = None
+    aliases: List[str] | None = None
+    message: str | None = None
+
+    for part in (p.strip() for p in comment.split("|")):
+        if not part:
+            continue
+        if "=" in part:
+            key, value = (piece.strip() for piece in part.split("=", 1))
+            if key == "type":
+                value_type = value
+                continue
+            if key == "allowed":
+                allowed = [item.strip() for item in value.split(",") if item.strip()]
+                continue
+            if key == "allowed_ci":
+                allowed_ci = value.lower() in {"true", "1", "yes"}
+                continue
+            if key == "pattern":
+                pattern = value
+                continue
+            if key == "min":
+                try:
+                    min_value = float(value)
+                except ValueError:
+                    min_value = None
+                continue
+            if key == "max":
+                try:
+                    max_value = float(value)
+                except ValueError:
+                    max_value = None
+                continue
+            if key == "min_len":
+                try:
+                    min_len = int(value)
+                except ValueError:
+                    min_len = None
+                continue
+            if key == "max_len":
+                try:
+                    max_len = int(value)
+                except ValueError:
+                    max_len = None
+                continue
+            if key == "aliases":
+                aliases = [item.strip() for item in value.split(",") if item.strip()]
+                continue
+            if key == "message":
+                message = value
+                continue
+        description_parts.append(part)
+
+    description = " ".join(description_parts).strip() or None
+    return (
+        description,
+        value_type,
+        allowed,
+        allowed_ci,
+        pattern,
+        min_value,
+        max_value,
+        min_len,
+        max_len,
+        aliases,
+        message,
+    )
 
 
 def _parse_env_example_lines(lines: Iterable[str]) -> List[EnvSpec]:
     specs: List[EnvSpec] = []
     pending_desc: Optional[str] = None
+    pending_type: Optional[str] = None
+    pending_allowed: List[str] | None = None
+    pending_allowed_ci: bool | None = None
+    pending_pattern: Optional[str] = None
+    pending_min: float | None = None
+    pending_max: float | None = None
+    pending_min_len: int | None = None
+    pending_max_len: int | None = None
+    pending_aliases: List[str] | None = None
+    pending_message: str | None = None
 
     for raw in lines:
         line = raw.strip()
@@ -43,7 +159,19 @@ def _parse_env_example_lines(lines: Iterable[str]) -> List[EnvSpec]:
         if line.startswith("#"):
             comment = line.lstrip("#").strip()
             if comment:
-                pending_desc = comment
+                (
+                    pending_desc,
+                    pending_type,
+                    pending_allowed,
+                    pending_allowed_ci,
+                    pending_pattern,
+                    pending_min,
+                    pending_max,
+                    pending_min_len,
+                    pending_max_len,
+                    pending_aliases,
+                    pending_message,
+                ) = _parse_comment(comment)
             continue
 
         if line.startswith("export "):
@@ -63,9 +191,29 @@ def _parse_env_example_lines(lines: Iterable[str]) -> List[EnvSpec]:
                 default=default,
                 required=required,
                 description=pending_desc,
+                value_type=pending_type,
+                allowed=pending_allowed,
+                allowed_ci=pending_allowed_ci,
+                pattern=pending_pattern,
+                min_value=pending_min,
+                max_value=pending_max,
+                min_len=pending_min_len,
+                max_len=pending_max_len,
+                aliases=pending_aliases,
+                message=pending_message,
             )
         )
         pending_desc = None
+        pending_type = None
+        pending_allowed = None
+        pending_allowed_ci = None
+        pending_pattern = None
+        pending_min = None
+        pending_max = None
+        pending_min_len = None
+        pending_max_len = None
+        pending_aliases = None
+        pending_message = None
 
     return specs
 
@@ -75,12 +223,14 @@ def parse_env_example(content: str) -> List[EnvSpec]:
 
 
 def parse_env(content: str) -> Dict[str, str]:
-    return {k: v for k, v in dotenv_values(stream=content).items() if k}
+    stream = io.StringIO(content)
+    return {k: v for k, v in dotenv_values(stream=stream).items() if k}
 
 
 def validate_env(example_content: str, env_content: str) -> ValidationReport:
     specs = parse_env_example(example_content)
     env = parse_env(env_content)
+    specs_by_key = {spec.key: spec for spec in specs}
 
     spec_keys = {spec.key for spec in specs}
     required_keys = {spec.key for spec in specs if spec.required}
@@ -96,15 +246,136 @@ def validate_env(example_content: str, env_content: str) -> ValidationReport:
         if key in spec_keys and (value is None or str(value).strip() == "")
     ]
 
+    invalid_values: List[ValidationIssue] = []
+    for key, value in env.items():
+        if key not in specs_by_key:
+            continue
+        if value is None or str(value).strip() == "":
+            continue
+        spec = specs_by_key[key]
+        if spec.value_type:
+            raw_value = str(value)
+            if spec.value_type == "int":
+                if not re.fullmatch(r"[-+]?\d+", raw_value):
+                    invalid_values.append(
+                        ValidationIssue(
+                            key=key, reason=_reason("invalid_type", spec, raw_value)
+                        )
+                    )
+                    continue
+            elif spec.value_type == "float":
+                try:
+                    float(raw_value)
+                except ValueError:
+                    invalid_values.append(
+                        ValidationIssue(
+                            key=key, reason=_reason("invalid_type", spec, raw_value)
+                        )
+                    )
+                    continue
+            elif spec.value_type == "bool":
+                if raw_value.lower() not in {"true", "false", "1", "0"}:
+                    invalid_values.append(
+                        ValidationIssue(
+                            key=key, reason=_reason("invalid_type", spec, raw_value)
+                        )
+                    )
+                    continue
+        if spec.allowed:
+            if spec.allowed_ci:
+                allowed_set = {item.lower() for item in spec.allowed}
+                alias_set = {item.lower() for item in spec.aliases or []}
+                if str(value).lower() not in allowed_set | alias_set:
+                    invalid_values.append(
+                        ValidationIssue(
+                            key=key, reason=_reason("invalid_allowed", spec, str(value))
+                        )
+                    )
+                    continue
+            else:
+                allowed_set = set(spec.allowed)
+                alias_set = set(spec.aliases or [])
+                if str(value) not in allowed_set | alias_set:
+                    invalid_values.append(
+                        ValidationIssue(
+                            key=key, reason=_reason("invalid_allowed", spec, str(value))
+                        )
+                    )
+                    continue
+        if spec.pattern:
+            if re.fullmatch(spec.pattern, str(value)) is None:
+                invalid_values.append(
+                    ValidationIssue(
+                        key=key, reason=_reason("invalid_pattern", spec, str(value))
+                    )
+                )
+                continue
+        if spec.min_len is not None or spec.max_len is not None:
+            length = len(str(value))
+            if spec.min_len is not None and length < spec.min_len:
+                invalid_values.append(
+                    ValidationIssue(key=key, reason=_reason("min_len", spec, str(value)))
+                )
+                continue
+            if spec.max_len is not None and length > spec.max_len:
+                invalid_values.append(
+                    ValidationIssue(key=key, reason=_reason("max_len", spec, str(value)))
+                )
+                continue
+        if spec.value_type in {"int", "float"} and (spec.min_value is not None or spec.max_value is not None):
+            try:
+                numeric = float(str(value))
+            except ValueError:
+                invalid_values.append(
+                    ValidationIssue(
+                        key=key, reason=_reason("invalid_type", spec, str(value))
+                    )
+                )
+                continue
+            if spec.min_value is not None and numeric < spec.min_value:
+                invalid_values.append(
+                    ValidationIssue(
+                        key=key, reason=_reason("min_value", spec, str(value))
+                    )
+                )
+                continue
+            if spec.max_value is not None and numeric > spec.max_value:
+                invalid_values.append(
+                    ValidationIssue(
+                        key=key, reason=_reason("max_value", spec, str(value))
+                    )
+                )
+                continue
+        if spec.aliases and not spec.allowed:
+            raw = str(value)
+            if spec.allowed_ci:
+                alias_set = {item.lower() for item in spec.aliases}
+                if raw.lower() not in alias_set:
+                    invalid_values.append(
+                        ValidationIssue(
+                            key=key, reason=_reason("invalid_alias", spec, raw)
+                        )
+                    )
+                    continue
+            else:
+                if raw not in set(spec.aliases):
+                    invalid_values.append(
+                        ValidationIssue(
+                            key=key, reason=_reason("invalid_alias", spec, raw)
+                        )
+                    )
+                    continue
+
     extra_keys = [
         ValidationIssue(key=key, reason="extra")
         for key in sorted(env.keys() - spec_keys)
     ]
 
-    ok = not (required_missing or empty_values or extra_keys)
+    ok = not (required_missing or empty_values or invalid_values or extra_keys)
     report = ValidationReport(
         required_missing=required_missing,
         empty_values=empty_values,
+        invalid_values=invalid_values,
         extra_keys=extra_keys,
         ok=ok,
     )
@@ -119,19 +390,109 @@ def get_last_report() -> Optional[ValidationReport]:
     return _LAST_REPORT
 
 
+def _reason(code: str, spec: EnvSpec, value: str) -> str:
+    if spec.message:
+        return spec.message.replace("{code}", code).replace("{value}", value)
+    return code
+
+
+@dataclass(frozen=True)
+class DiffItem:
+    key: str
+    base_value: str | None
+    compare_value: str | None
+
+
+@dataclass(frozen=True)
+class DiffReport:
+    missing_in_compare: List[DiffItem]
+    extra_in_compare: List[DiffItem]
+    different_values: List[DiffItem]
+    ok: bool
+
+
+def diff_envs(base_content: str, compare_content: str) -> DiffReport:
+    base_env = parse_env(base_content)
+    compare_env = parse_env(compare_content)
+
+    base_keys = set(base_env.keys())
+    compare_keys = set(compare_env.keys())
+
+    missing_in_compare = [
+        DiffItem(key=key, base_value=base_env.get(key), compare_value=None)
+        for key in sorted(base_keys - compare_keys)
+    ]
+
+    extra_in_compare = [
+        DiffItem(key=key, base_value=None, compare_value=compare_env.get(key))
+        for key in sorted(compare_keys - base_keys)
+    ]
+
+    different_values = []
+    for key in sorted(base_keys & compare_keys):
+        base_value = base_env.get(key)
+        compare_value = compare_env.get(key)
+        if str(base_value) != str(compare_value):
+            different_values.append(
+                DiffItem(
+                    key=key,
+                    base_value=base_value,
+                    compare_value=compare_value,
+                )
+            )
+
+    ok = not (missing_in_compare or extra_in_compare or different_values)
+    report = DiffReport(
+        missing_in_compare=missing_in_compare,
+        extra_in_compare=extra_in_compare,
+        different_values=different_values,
+        ok=ok,
+    )
+
+    global _LAST_DIFF
+    _LAST_DIFF = report
+    return report
+
+
+def get_last_diff() -> Optional[DiffReport]:
+    return _LAST_DIFF
+
+
 def generate_docs_markdown(specs: List[EnvSpec]) -> str:
     lines = [
         "# Configuration",
         "",
-        "| Name | Required | Default | Description |",
-        "|------|----------|---------|-------------|",
+        "| Name | Required | Default | Description | Constraints |",
+        "|------|----------|---------|-------------|-------------|",
     ]
     for spec in specs:
         required = "Yes" if spec.required else "No"
         default = spec.default or ""
         description = spec.description or ""
+        constraints_parts: List[str] = []
+        if spec.value_type:
+            constraints_parts.append(f"type={spec.value_type}")
+        if spec.allowed:
+            constraints_parts.append(f"allowed={','.join(spec.allowed)}")
+        if spec.allowed_ci:
+            constraints_parts.append("allowed_ci=true")
+        if spec.pattern:
+            constraints_parts.append(f"pattern={spec.pattern}")
+        if spec.min_value is not None:
+            constraints_parts.append(f"min={spec.min_value:g}")
+        if spec.max_value is not None:
+            constraints_parts.append(f"max={spec.max_value:g}")
+        if spec.min_len is not None:
+            constraints_parts.append(f"min_len={spec.min_len}")
+        if spec.max_len is not None:
+            constraints_parts.append(f"max_len={spec.max_len}")
+        if spec.aliases:
+            constraints_parts.append(f"aliases={','.join(spec.aliases)}")
+        if spec.message:
+            constraints_parts.append(f"message={spec.message}")
+        constraints = "; ".join(constraints_parts)
         lines.append(
-            f"| {spec.key} | {required} | {default} | {description} |"
+            f"| {spec.key} | {required} | {default} | {description} | {constraints} |"
         )
     lines.append("")
     return "\n".join(lines)
