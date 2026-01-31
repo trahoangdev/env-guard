@@ -49,11 +49,11 @@ History entries link to detail pages with JSON download.
 Rules are defined in comment lines above each variable using `|` separators:
 
 ```
-# Logging level | allowed=debug,info,warning,error | allowed_ci=true
+# Logging level | allowed=debug,info,warning,error | allowed_ci=true | aliases=warn,err
 LOG_LEVEL=info
 # Server port | type=int | min=1024 | max=65535
 PORT=8000
-# Required secret token | pattern=^[A-Za-z0-9_\\-]{12,}$ | min_len=12
+# Required secret token | pattern=^[A-Za-z0-9_\\-]{12,}$ | min_len=12 | message=Token must be 12+ safe chars
 SECRET_TOKEN=
 ```
 
@@ -63,6 +63,8 @@ Supported constraints:
 - `pattern` (regex)
 - `min` / `max` (numeric)
 - `min_len` / `max_len` (string length)
+- `aliases` (extra enum aliases)
+- `message` (custom error message, supports `{code}` and `{value}`)
 
 ## CLI
 

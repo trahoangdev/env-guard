@@ -55,6 +55,32 @@ def test_validate_allowed_ci() -> None:
     assert payload["ok"] is True
 
 
+def test_validate_aliases() -> None:
+    example_content = "# Level | allowed=debug,info,warning | aliases=warn,err\nLOG_LEVEL=info\n"
+    env_content = "LOG_LEVEL=warn\n"
+    files = {
+        "example_file": (".env.example", example_content, "text/plain"),
+        "env_file": (".env", env_content, "text/plain"),
+    }
+    response = client.post("/api/v1/env/validate", files=files)
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["ok"] is True
+
+
+def test_validate_custom_message() -> None:
+    example_content = "# Token | pattern=^[A-Z]{3}$ | message=Bad token: {value}\nTOKEN=\n"
+    env_content = "TOKEN=abc\n"
+    files = {
+        "example_file": (".env.example", example_content, "text/plain"),
+        "env_file": (".env", env_content, "text/plain"),
+    }
+    response = client.post("/api/v1/env/validate", files=files)
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["invalid_values"][0]["reason"] == "Bad token: abc"
+
+
 def test_diff_env() -> None:
     base_content = "A=1\nB=2\n"
     compare_content = "A=1\nB=3\nC=4\n"

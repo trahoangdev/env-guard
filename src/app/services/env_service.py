@@ -22,6 +22,8 @@ class EnvSpec:
     max_value: float | None
     min_len: int | None
     max_len: int | None
+    aliases: List[str] | None
+    message: str | None
 
 
 @dataclass(frozen=True)
@@ -55,6 +57,8 @@ def _parse_comment(
     float | None,
     int | None,
     int | None,
+    List[str] | None,
+    str | None,
 ]:
     description_parts: List[str] = []
     value_type: str | None = None
@@ -65,6 +69,8 @@ def _parse_comment(
     max_value: float | None = None
     min_len: int | None = None
     max_len: int | None = None
+    aliases: List[str] | None = None
+    message: str | None = None
 
     for part in (p.strip() for p in comment.split("|")):
         if not part:
@@ -107,6 +113,12 @@ def _parse_comment(
                 except ValueError:
                     max_len = None
                 continue
+            if key == "aliases":
+                aliases = [item.strip() for item in value.split(",") if item.strip()]
+                continue
+            if key == "message":
+                message = value
+                continue
         description_parts.append(part)
 
     description = " ".join(description_parts).strip() or None
@@ -120,6 +132,8 @@ def _parse_comment(
         max_value,
         min_len,
         max_len,
+        aliases,
+        message,
     )
 
 
@@ -134,6 +148,8 @@ def _parse_env_example_lines(lines: Iterable[str]) -> List[EnvSpec]:
     pending_max: float | None = None
     pending_min_len: int | None = None
     pending_max_len: int | None = None
+    pending_aliases: List[str] | None = None
+    pending_message: str | None = None
 
     for raw in lines:
         line = raw.strip()
@@ -153,6 +169,8 @@ def _parse_env_example_lines(lines: Iterable[str]) -> List[EnvSpec]:
                     pending_max,
                     pending_min_len,
                     pending_max_len,
+                    pending_aliases,
+                    pending_message,
                 ) = _parse_comment(comment)
             continue
 
@@ -181,6 +199,8 @@ def _parse_env_example_lines(lines: Iterable[str]) -> List[EnvSpec]:
                 max_value=pending_max,
                 min_len=pending_min_len,
                 max_len=pending_max_len,
+                aliases=pending_aliases,
+                message=pending_message,
             )
         )
         pending_desc = None
@@ -192,6 +212,8 @@ def _parse_env_example_lines(lines: Iterable[str]) -> List[EnvSpec]:
         pending_max = None
         pending_min_len = None
         pending_max_len = None
+        pending_aliases = None
+        pending_message = None
 
     return specs
 
@@ -235,52 +257,114 @@ def validate_env(example_content: str, env_content: str) -> ValidationReport:
             raw_value = str(value)
             if spec.value_type == "int":
                 if not re.fullmatch(r"[-+]?\d+", raw_value):
-                    invalid_values.append(ValidationIssue(key=key, reason="invalid_type"))
+                    invalid_values.append(
+                        ValidationIssue(
+                            key=key, reason=_reason("invalid_type", spec, raw_value)
+                        )
+                    )
                     continue
             elif spec.value_type == "float":
                 try:
                     float(raw_value)
                 except ValueError:
-                    invalid_values.append(ValidationIssue(key=key, reason="invalid_type"))
+                    invalid_values.append(
+                        ValidationIssue(
+                            key=key, reason=_reason("invalid_type", spec, raw_value)
+                        )
+                    )
                     continue
             elif spec.value_type == "bool":
                 if raw_value.lower() not in {"true", "false", "1", "0"}:
-                    invalid_values.append(ValidationIssue(key=key, reason="invalid_type"))
+                    invalid_values.append(
+                        ValidationIssue(
+                            key=key, reason=_reason("invalid_type", spec, raw_value)
+                        )
+                    )
                     continue
         if spec.allowed:
             if spec.allowed_ci:
-                if str(value).lower() not in {item.lower() for item in spec.allowed}:
+                allowed_set = {item.lower() for item in spec.allowed}
+                alias_set = {item.lower() for item in spec.aliases or []}
+                if str(value).lower() not in allowed_set | alias_set:
                     invalid_values.append(
-                        ValidationIssue(key=key, reason="invalid_allowed")
+                        ValidationIssue(
+                            key=key, reason=_reason("invalid_allowed", spec, str(value))
+                        )
                     )
                     continue
-            elif str(value) not in spec.allowed:
-                invalid_values.append(ValidationIssue(key=key, reason="invalid_allowed"))
-                continue
+            else:
+                allowed_set = set(spec.allowed)
+                alias_set = set(spec.aliases or [])
+                if str(value) not in allowed_set | alias_set:
+                    invalid_values.append(
+                        ValidationIssue(
+                            key=key, reason=_reason("invalid_allowed", spec, str(value))
+                        )
+                    )
+                    continue
         if spec.pattern:
             if re.fullmatch(spec.pattern, str(value)) is None:
-                invalid_values.append(ValidationIssue(key=key, reason="invalid_pattern"))
+                invalid_values.append(
+                    ValidationIssue(
+                        key=key, reason=_reason("invalid_pattern", spec, str(value))
+                    )
+                )
                 continue
         if spec.min_len is not None or spec.max_len is not None:
             length = len(str(value))
             if spec.min_len is not None and length < spec.min_len:
-                invalid_values.append(ValidationIssue(key=key, reason="min_len"))
+                invalid_values.append(
+                    ValidationIssue(key=key, reason=_reason("min_len", spec, str(value)))
+                )
                 continue
             if spec.max_len is not None and length > spec.max_len:
-                invalid_values.append(ValidationIssue(key=key, reason="max_len"))
+                invalid_values.append(
+                    ValidationIssue(key=key, reason=_reason("max_len", spec, str(value)))
+                )
                 continue
         if spec.value_type in {"int", "float"} and (spec.min_value is not None or spec.max_value is not None):
             try:
                 numeric = float(str(value))
             except ValueError:
-                invalid_values.append(ValidationIssue(key=key, reason="invalid_type"))
+                invalid_values.append(
+                    ValidationIssue(
+                        key=key, reason=_reason("invalid_type", spec, str(value))
+                    )
+                )
                 continue
             if spec.min_value is not None and numeric < spec.min_value:
-                invalid_values.append(ValidationIssue(key=key, reason="min_value"))
+                invalid_values.append(
+                    ValidationIssue(
+                        key=key, reason=_reason("min_value", spec, str(value))
+                    )
+                )
                 continue
             if spec.max_value is not None and numeric > spec.max_value:
-                invalid_values.append(ValidationIssue(key=key, reason="max_value"))
+                invalid_values.append(
+                    ValidationIssue(
+                        key=key, reason=_reason("max_value", spec, str(value))
+                    )
+                )
                 continue
+        if spec.aliases and not spec.allowed:
+            raw = str(value)
+            if spec.allowed_ci:
+                alias_set = {item.lower() for item in spec.aliases}
+                if raw.lower() not in alias_set:
+                    invalid_values.append(
+                        ValidationIssue(
+                            key=key, reason=_reason("invalid_alias", spec, raw)
+                        )
+                    )
+                    continue
+            else:
+                if raw not in set(spec.aliases):
+                    invalid_values.append(
+                        ValidationIssue(
+                            key=key, reason=_reason("invalid_alias", spec, raw)
+                        )
+                    )
+                    continue
 
     extra_keys = [
         ValidationIssue(key=key, reason="extra")
@@ -304,6 +388,12 @@ def validate_env(example_content: str, env_content: str) -> ValidationReport:
 
 def get_last_report() -> Optional[ValidationReport]:
     return _LAST_REPORT
+
+
+def _reason(code: str, spec: EnvSpec, value: str) -> str:
+    if spec.message:
+        return spec.message.replace("{code}", code).replace("{value}", value)
+    return code
 
 
 @dataclass(frozen=True)
@@ -396,6 +486,10 @@ def generate_docs_markdown(specs: List[EnvSpec]) -> str:
             constraints_parts.append(f"min_len={spec.min_len}")
         if spec.max_len is not None:
             constraints_parts.append(f"max_len={spec.max_len}")
+        if spec.aliases:
+            constraints_parts.append(f"aliases={','.join(spec.aliases)}")
+        if spec.message:
+            constraints_parts.append(f"message={spec.message}")
         constraints = "; ".join(constraints_parts)
         lines.append(
             f"| {spec.key} | {required} | {default} | {description} | {constraints} |"

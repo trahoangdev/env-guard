@@ -18,6 +18,8 @@ class EnvVariableSpec(BaseModel):
     max_value: Optional[float] = None
     min_len: Optional[int] = None
     max_len: Optional[int] = None
+    aliases: Optional[List[str]] = None
+    message: Optional[str] = None
 
 
 class ValidationIssue(BaseModel):
