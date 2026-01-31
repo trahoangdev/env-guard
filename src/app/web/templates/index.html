@@ -130,6 +130,7 @@
         border-radius: 12px;
         padding: 12px;
         font-size: 13px;
+        overflow: hidden;
       }
       .summary {
         display: flex;
@@ -162,6 +163,8 @@
         border: 1px solid var(--border);
         border-radius: 10px;
         padding: 10px;
+        max-width: 100%;
+        overflow: auto;
       }
       .issue-group h3 {
         margin: 0 0 6px;
@@ -176,6 +179,8 @@
       }
       .issue-group li {
         margin-bottom: 4px;
+        word-break: break-word;
+        overflow-wrap: anywhere;
       }
       .history {
         margin-top: 16px;
@@ -196,6 +201,9 @@
         border-radius: 10px;
         padding: 10px;
         font-size: 12px;
+        max-height: 220px;
+        overflow: auto;
+        word-break: break-word;
       }
       @media (max-width: 600px) {
         header {
