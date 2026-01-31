@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Env Guard</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f7f4ef;
+        --card: #ffffff;
+        --ink: #1b1b1b;
+        --muted: #6a6a6a;
+        --accent: #3b6eea;
+        --border: #e2ded7;
+        --ok: #1f8a4c;
+        --warn: #b85f00;
+      }
+      body {
+        margin: 0;
+        font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+        background: linear-gradient(135deg, #f7f4ef 0%, #f0f7ff 100%);
+        color: var(--ink);
+      }
+      .wrap {
+        max-width: 1100px;
+        margin: 32px auto 80px;
+        padding: 0 20px;
+      }
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+      }
+      h1 {
+        margin: 0;
+        font-size: 30px;
+        letter-spacing: -0.5px;
+      }
+      .sub {
+        color: var(--muted);
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 16px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 18px;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.06);
+      }
+      .card h2 {
+        margin: 0 0 12px;
+        font-size: 18px;
+      }
+      label {
+        display: block;
+        font-size: 13px;
+        color: var(--muted);
+        margin-bottom: 4px;
+      }
+      input[type="file"] {
+        width: 100%;
+        margin-bottom: 12px;
+      }
+      button {
+        background: var(--accent);
+        color: white;
+        border: none;
+        padding: 10px 16px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .result {
+        margin-top: 12px;
+        font-size: 13px;
+        background: #f8f8f8;
+        border-radius: 10px;
+        padding: 10px;
+        border: 1px dashed var(--border);
+        white-space: pre-wrap;
+      }
+      .ok {
+        color: var(--ok);
+        font-weight: 600;
+      }
+      .bad {
+        color: var(--warn);
+        font-weight: 600;
+      }
+      .history {
+        margin-top: 16px;
+        font-size: 12px;
+      }
+      .history ul {
+        padding-left: 16px;
+      }
+      .pill {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: #eef3ff;
+        color: var(--accent);
+        font-size: 12px;
+        margin-left: 8px;
+      }
+      @media (max-width: 600px) {
+        header {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 8px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <div>
+          <h1>Env Guard</h1>
+          <div class="sub">Validate env files, detect drift, and generate docs.</div>
+        </div>
+        <div class="pill">Web UI</div>
+      </header>
+
+      <div class="grid">
+        <div class="card">
+          <h2>Validate .env</h2>
+          <form action="/validate-ui" method="post" enctype="multipart/form-data">
+            <label>Env file</label>
+            <input type="file" name="env_file" required />
+            <label>.env.example (optional)</label>
+            <input type="file" name="example_file" />
+            <button type="submit">Validate</button>
+          </form>
+          {% if validation %}
+          <div class="result">
+            {% if validation.ok %}
+            <div class="ok">OK — no issues found.</div>
+            {% else %}
+            <div class="bad">Issues detected.</div>
+            {% endif %}
+            {{ validation | tojson(indent=2) }}
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="card">
+          <h2>Diff envs</h2>
+          <form action="/diff-ui" method="post" enctype="multipart/form-data">
+            <label>Base env</label>
+            <input type="file" name="base_env_file" required />
+            <label>Compare env</label>
+            <input type="file" name="compare_env_file" required />
+            <button type="submit">Diff</button>
+          </form>
+          {% if diff %}
+          <div class="result">
+            {% if diff.ok %}
+            <div class="ok">No differences.</div>
+            {% else %}
+            <div class="bad">Differences found.</div>
+            {% endif %}
+            {{ diff | tojson(indent=2) }}
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="card">
+          <h2>Generate docs</h2>
+          <form action="/docs-ui" method="post" enctype="multipart/form-data">
+            <label>.env.example (optional)</label>
+            <input type="file" name="example_file" />
+            <button type="submit">Generate</button>
+          </form>
+          {% if docs %}
+          <div class="result">{{ docs.markdown }}</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="grid" style="margin-top: 18px;">
+        <div class="card history">
+          <h2>Validation history</h2>
+          <ul>
+            {% for item in history %}
+            <li>#{{ item.id }} · {{ item.created_at }} · ok={{ item.payload.ok }}</li>
+            {% else %}
+            <li>No history yet.</li>
+            {% endfor %}
+          </ul>
+        </div>
+        <div class="card history">
+          <h2>Diff history</h2>
+          <ul>
+            {% for item in diff_history %}
+            <li>#{{ item.id }} · {{ item.created_at }} · ok={{ item.payload.ok }}</li>
+            {% else %}
+            <li>No history yet.</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

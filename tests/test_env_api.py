@@ -42,6 +42,19 @@ def test_validate_min_max() -> None:
     assert payload["invalid_values"][0]["reason"] == "min_value"
 
 
+def test_validate_allowed_ci() -> None:
+    example_content = "# Level | allowed=debug,info,warning | allowed_ci=true\nLOG_LEVEL=info\n"
+    env_content = "LOG_LEVEL=WARNING\n"
+    files = {
+        "example_file": (".env.example", example_content, "text/plain"),
+        "env_file": (".env", env_content, "text/plain"),
+    }
+    response = client.post("/api/v1/env/validate", files=files)
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["ok"] is True
+
+
 def test_diff_env() -> None:
     base_content = "A=1\nB=2\n"
     compare_content = "A=1\nB=3\nC=4\n"

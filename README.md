@@ -18,6 +18,10 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --app-dir src
 ```
 
+## Web UI
+
+Open `http://127.0.0.1:8000/` to upload env files, view validation/diff results, and generate docs.
+
 ## API
 
 - `GET /health`
@@ -44,13 +48,29 @@ uvicorn app.main:app --reload --app-dir src
 Rules are defined in comment lines above each variable using `|` separators:
 
 ```
+# Logging level | allowed=debug,info,warning,error | allowed_ci=true
+LOG_LEVEL=info
 # Server port | type=int | min=1024 | max=65535
 PORT=8000
 # Required secret token | pattern=^[A-Za-z0-9_\\-]{12,}$ | min_len=12
 SECRET_TOKEN=
 ```
 
+Supported constraints:
+- `type` (int, float, bool)
+- `allowed` with optional `allowed_ci`
+- `pattern` (regex)
+- `min` / `max` (numeric)
+- `min_len` / `max_len` (string length)
+
 ## CLI
+
+```bash
+pip install -e .
+envguard validate --example .env.example --env .env
+envguard docs --example .env.example --out docs/config.md
+envguard diff --base .env --compare .env.staging
+```
 
 ```bash
 python scripts/envguard_cli.py validate --example .env.example --env .env
