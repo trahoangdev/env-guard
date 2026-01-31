@@ -16,7 +16,6 @@
         --accent: #2869ff;
         --accent-2: #f7b84f;
         --ok: #1f8a4c;
-        --warn: #c04b00;
         --bad: #b3261e;
         --shadow: 0 18px 40px rgba(19, 21, 27, 0.08);
       }
@@ -77,6 +76,17 @@
         color: #8a4b00;
         font-size: 12px;
         font-weight: 600;
+      }
+      .nav {
+        display: inline-flex;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      .nav a {
+        text-decoration: none;
+        color: var(--accent);
+        font-weight: 600;
+        font-size: 13px;
       }
       .grid {
         display: grid;
@@ -179,20 +189,6 @@
         text-decoration: none;
         font-weight: 600;
       }
-      .doc-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 12px;
-      }
-      .doc-table th,
-      .doc-table td {
-        border: 1px solid var(--border);
-        padding: 6px 8px;
-        text-align: left;
-      }
-      .doc-table th {
-        background: #f6f7fb;
-      }
       .raw {
         margin-top: 10px;
         white-space: pre-wrap;
@@ -215,6 +211,10 @@
         <div>
           <h1>Env Guard</h1>
           <div class="sub">Validate env files, detect drift, and generate docs.</div>
+          <div class="nav">
+            <a href="/">Home</a>
+            <a href="/docs">Docs</a>
+          </div>
         </div>
         <div class="pill">Web Console</div>
       </header>
@@ -345,53 +345,6 @@
               </div>
             </div>
             <div class="raw">{{ diff | tojson(indent=2) }}</div>
-          </div>
-          {% endif %}
-        </div>
-
-        <div class="card">
-          <h2>Generate docs</h2>
-          <form action="/docs-ui" method="post" enctype="multipart/form-data">
-            <label>.env.example (optional)</label>
-            <input type="file" name="example_file" />
-            <button type="submit">Generate</button>
-          </form>
-          {% if docs %}
-          <div class="result">
-            <table class="doc-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Required</th>
-                  <th>Default</th>
-                  <th>Description</th>
-                  <th>Constraints</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for item in docs.variables %}
-                <tr>
-                  <td>{{ item.key }}</td>
-                  <td>{{ item.required }}</td>
-                  <td>{{ item.default }}</td>
-                  <td>{{ item.description }}</td>
-                  <td>
-                    {% if item.value_type %}type={{ item.value_type }}{% endif %}
-                    {% if item.allowed %}; allowed={{ item.allowed | join(',') }}{% endif %}
-                    {% if item.allowed_ci %}; allowed_ci=true{% endif %}
-                    {% if item.pattern %}; pattern={{ item.pattern }}{% endif %}
-                    {% if item.min_value is not none %}; min={{ item.min_value }}{% endif %}
-                    {% if item.max_value is not none %}; max={{ item.max_value }}{% endif %}
-                    {% if item.min_len is not none %}; min_len={{ item.min_len }}{% endif %}
-                    {% if item.max_len is not none %}; max_len={{ item.max_len }}{% endif %}
-                    {% if item.aliases %}; aliases={{ item.aliases | join(',') }}{% endif %}
-                    {% if item.message %}; message={{ item.message }}{% endif %}
-                  </td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-            <div class="raw">{{ docs.markdown }}</div>
           </div>
           {% endif %}
         </div>

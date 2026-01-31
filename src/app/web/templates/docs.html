@@ -1,0 +1,185 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Env Guard Docs</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f6f2ea;
+        --bg-2: #eef5ff;
+        --ink: #161616;
+        --muted: #6e6a63;
+        --card: #ffffff;
+        --border: #e7e1d7;
+        --accent: #2869ff;
+        --shadow: 0 18px 40px rgba(19, 21, 27, 0.08);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: "Space Grotesk", "IBM Plex Sans", "Segoe UI", sans-serif;
+        color: var(--ink);
+        background: radial-gradient(circle at 10% 10%, #ffffff 0%, var(--bg) 45%)
+            no-repeat,
+          radial-gradient(circle at 80% 0%, #f0f7ff 0%, transparent 55%)
+            no-repeat,
+          linear-gradient(135deg, var(--bg) 0%, var(--bg-2) 100%);
+        min-height: 100vh;
+      }
+      .wrap {
+        max-width: 1100px;
+        margin: 36px auto 80px;
+        padding: 0 20px;
+      }
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+      h1 {
+        margin: 0 0 6px;
+        font-size: 30px;
+      }
+      .sub {
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .nav a {
+        text-decoration: none;
+        color: var(--accent);
+        font-weight: 600;
+        font-size: 13px;
+        margin-right: 8px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 18px;
+        box-shadow: var(--shadow);
+      }
+      label {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+      input[type="file"] {
+        width: 100%;
+        margin-bottom: 12px;
+      }
+      button {
+        background: var(--accent);
+        color: #fff;
+        border: none;
+        padding: 10px 16px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .result {
+        margin-top: 14px;
+        background: #fbfaf8;
+        border: 1px dashed var(--border);
+        border-radius: 12px;
+        padding: 12px;
+      }
+      .table-wrap {
+        max-width: 100%;
+        overflow-x: auto;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+        min-width: 680px;
+      }
+      th,
+      td {
+        border: 1px solid var(--border);
+        padding: 6px 8px;
+        text-align: left;
+      }
+      th {
+        background: #f6f7fb;
+      }
+      .raw {
+        margin-top: 12px;
+        background: #f3f4f6;
+        border-radius: 10px;
+        padding: 10px;
+        font-size: 12px;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <div>
+          <h1>Generate docs</h1>
+          <div class="sub">Upload a .env.example file to build a config table.</div>
+          <div class="nav">
+            <a href="/">Home</a>
+            <a href="/docs">Docs</a>
+          </div>
+        </div>
+      </header>
+
+      <div class="card">
+        <form action="/docs-ui" method="post" enctype="multipart/form-data">
+          <label>.env.example (optional)</label>
+          <input type="file" name="example_file" />
+          <button type="submit">Generate</button>
+        </form>
+
+        {% if docs %}
+        <div class="result">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Required</th>
+                  <th>Default</th>
+                  <th>Description</th>
+                  <th>Constraints</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in docs.variables %}
+                <tr>
+                  <td>{{ item.key }}</td>
+                  <td>{{ item.required }}</td>
+                  <td>{{ item.default }}</td>
+                  <td>{{ item.description }}</td>
+                  <td>
+                    {% if item.value_type %}type={{ item.value_type }}{% endif %}
+                    {% if item.allowed %}; allowed={{ item.allowed | join(',') }}{% endif %}
+                    {% if item.allowed_ci %}; allowed_ci=true{% endif %}
+                    {% if item.pattern %}; pattern={{ item.pattern }}{% endif %}
+                    {% if item.min_value is not none %}; min={{ item.min_value }}{% endif %}
+                    {% if item.max_value is not none %}; max={{ item.max_value }}{% endif %}
+                    {% if item.min_len is not none %}; min_len={{ item.min_len }}{% endif %}
+                    {% if item.max_len is not none %}; max_len={{ item.max_len }}{% endif %}
+                    {% if item.aliases %}; aliases={{ item.aliases | join(',') }}{% endif %}
+                    {% if item.message %}; message={{ item.message }}{% endif %}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <div class="raw">{{ docs.markdown }}</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </body>
+</html>

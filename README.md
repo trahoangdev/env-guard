@@ -20,8 +20,9 @@ uvicorn app.main:app --reload --app-dir src
 
 ## Web UI
 
-Open `http://127.0.0.1:8000/` to upload env files, view validation/diff results, and generate docs.
-History entries link to detail pages with JSON download.
+- Home: `http://127.0.0.1:8000/` (validate + diff)
+- Docs: `http://127.0.0.1:8000/docs` (generate docs)
+- History entries link to detail pages with JSON download.
 
 ## API
 
@@ -53,7 +54,7 @@ Rules are defined in comment lines above each variable using `|` separators:
 LOG_LEVEL=info
 # Server port | type=int | min=1024 | max=65535
 PORT=8000
-# Required secret token | pattern=^[A-Za-z0-9_\\-]{12,}$ | min_len=12 | message=Token must be 12+ safe chars
+# Required secret token | pattern=^[A-Za-z0-9_\-]{12,}$ | min_len=12 | message=Token must be 12+ safe chars
 SECRET_TOKEN=
 ```
 
